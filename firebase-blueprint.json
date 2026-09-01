@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "Settings": {
+      "title": "Site Settings",
+      "description": "Global configuration for the website",
+      "type": "object",
+      "properties": {
+        "site_name": { "type": "string" },
+        "tagline": { "type": "string" },
+        "theme": { "type": "string", "enum": ["dark", "light"] },
+        "font": { "type": "string" },
+        "color": { "type": "string" },
+        "currency": { "type": "string" },
+        "whmcs_url": { "type": "string" },
+        "whmcs_identifier": { "type": "string" },
+        "whmcs_secret": { "type": "string" },
+        "whatsapp_number": { "type": "string" },
+        "whatsapp_message": { "type": "string" },
+        "nav_links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "href": { "type": "string" }
+            }
+          }
+        },
+        "privacy": { "type": "string" },
+        "refund": { "type": "string" },
+        "categories": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["site_name", "tagline", "theme", "font", "color", "currency", "nav_links", "categories"]
+    },
+    "Plan": {
+      "title": "Hosting Plan",
+      "description": "A hosting plan with price and features",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "price": { "type": "string" },
+        "badge": { "type": "string" },
+        "category": { "type": "string" },
+        "desc": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "order": { "type": "number" }
+      },
+      "required": ["name", "price", "category", "features"]
+    },
+    "Testimonial": {
+      "title": "Customer Testimonial",
+      "description": "User review of the services",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "logo": { "type": "string" },
+        "server": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["name", "note"]
+    },
+    "Feedback": {
+      "title": "User Feedback",
+      "description": "General feedback from visitors",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "msg": { "type": "string" },
+        "rating": { "type": "number" },
+        "time": { "type": "string" }
+      },
+      "required": ["msg", "rating", "time"]
+    },
+    "WHMCSLog": {
+      "title": "WHMCS System Log",
+      "description": "Records of API interactions with WHMCS",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "status": { "type": "string", "enum": ["success", "error"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "message": { "type": "string" },
+        "payload": { "type": "string" },
+        "response": { "type": "string" }
+      }
+    },
+    "GlobalConfig": {
+      "title": "Database Config",
+      "description": "Sensitive credentials stored in database",
+      "type": "object",
+      "properties": {
+        "whmcs_url": { "type": "string" },
+        "whmcs_identifier": { "type": "string" },
+        "whmcs_secret": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "config/site": {
+      "schema": "Settings",
+      "description": "Singleton document for site configuration"
+    },
+    "plans": {
+      "schema": "Plan",
+      "description": "Collection of available hosting plans"
+    },
+    "testimonials": {
+      "schema": "Testimonial",
+      "description": "Collection of customer quotes"
+    },
+    "feedbacks": {
+      "schema": "Feedback",
+      "description": "Collection of user-submitted feedbacks"
+    },
+    "whmcs_logs": {
+      "schema": "WHMCSLog",
+      "description": "Historical log of WHMCS API communications"
+    },
+    "config": {
+      "schema": "GlobalConfig",
+      "description": "System-wide configuration settings"
+    }
+  }
+}

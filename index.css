@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-bg: var(--color-bg);
+  --color-bg-alt: var(--color-bg-alt);
+  --color-card: var(--color-card);
+  --color-border: var(--color-border);
+  --color-border-hover: var(--color-border-hover);
+  --color-foreground: var(--color-foreground);
+  --color-foreground-muted: var(--color-foreground-muted);
+  --color-foreground-dim: var(--color-foreground-dim);
+  --color-accent: var(--accent);
+  --color-accent-muted: var(--accent-muted);
+  --color-accent-foreground: var(--inv);
+  --color-inv: var(--inv);
+}
+
+:root {
+  /* Professional Warm Neutral Palette (0.5% saturation) */
+  --color-bg: #0a0a0b;
+  --color-bg-alt: #121214;
+  --color-card: #18181b;
+  --color-border: #27272a;
+  --color-border-hover: #3f3f46;
+  --color-foreground: #fafafa;
+  --color-foreground-muted: #a1a1aa;
+  --color-foreground-dim: #71717a;
+  --inv: #ffffff;
+  --accent: #8b5cf6;
+  --accent-muted: #7c3aed;
+  --radius: 0.5rem; /* Precision 8px radius */
+}
+
+[data-theme='light'] {
+  --color-bg: #fafafa;
+  --color-bg-alt: #f4f4f5;
+  --color-card: #ffffff;
+  --color-border: #e4e4e7;
+  --color-border-hover: #d4d4d8;
+  --color-foreground: #09090b;
+  --color-foreground-muted: #52525b;
+  --color-foreground-dim: #a1a1aa;
+  --inv: #ffffff;
+  --accent: #6366f1;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  transition: background-color 0.2s ease, color 0.2s ease;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

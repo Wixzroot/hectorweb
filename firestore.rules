@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email != null && request.auth.token.email in ['anshalmanoj2011@gmail.com', 'anshalmanojgaming@gmail.com'])
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Validations ---
+
+    function isValidSettings(data) {
+      return data.settings is map;
+    }
+
+    function isValidPlan(data) {
+      return data.name is string && data.name.size() > 0;
+    }
+
+    function isValidFeedback(data) {
+      return data.msg is string && data.msg.size() > 0;
+    }
+
+    function isValidTestimonial(data) {
+      return data.name is string && data.name.size() > 0;
+    }
+
+    // --- Collections ---
+
+    // Allow full access to whmcs_logs (for server ADC which evaluates as unauthenticated in this sandbox)
+    match /whmcs_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    match /config/site {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /plans/{planId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(planId) && isValidPlan(incoming());
+      allow update: if isAdmin() && isValidPlan(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /testimonials/{tId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(tId) && isValidTestimonial(incoming());
+      allow update: if isAdmin() && isValidTestimonial(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /feedbacks/{fId} {
+      allow read: if true;
+      allow create: if isValidId(fId) && isValidFeedback(incoming());
+      allow update, delete: if isAdmin();
+    }
+
+    match /admins/{userId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      // Only an existing admin can create another admin
+      allow write: if isAdmin();
+    }
+  }
+}
