@@ -52,6 +52,52 @@ export const DEFAULT_DATA: AppData = {
     }
   ],
   feedbacks: [],
+  systemNodes: [
+    {
+      id: 'node-ryzen-9950x',
+      name: 'RYZEN 9 9950X',
+      ip: '103.118.182.98',
+      role: 'Game Server Node & Hector Control Panel',
+      status: 'operational',
+      cpu: 'AMD Ryzen 9 9950X (16 Cores, 32 Threads @ 5.7 GHz Boost)',
+      ram: '128 GB DDR5 5600MHz ECC',
+      storage: '2x 2TB Gen4 Enterprise NVMe (7000 MB/s)',
+      location: 'Mumbai, India (Tier 4 DC)',
+      uptime: '99.99%',
+      hasPanel: true,
+      load: 18,
+      latencyMs: 11,
+      order: 1
+    },
+    {
+      id: 'node-epyc-7443p',
+      name: 'AMD EPYC 7443P',
+      ip: '103.118.182.99',
+      role: 'Enterprise High-Density Compute & Game VPS Node',
+      status: 'operational',
+      cpu: 'AMD EPYC 7443P (24 Cores, 48 Threads @ 3.4 GHz)',
+      ram: '256 GB Octa-Channel DDR4 ECC Reg',
+      storage: '4x 3.84TB Enterprise NVMe RAID 10',
+      location: 'Mumbai, India (Tier 4 DC)',
+      uptime: '99.98%',
+      hasPanel: false,
+      load: 24,
+      latencyMs: 13,
+      order: 2
+    }
+  ],
+  incidents: [
+    {
+      id: 'inc-routine-check',
+      title: 'Global Anycast Network & Node Health Verified',
+      type: 'notice',
+      severity: 'resolved',
+      status: 'resolved',
+      affectedNodes: ['RYZEN 9 9950X', 'AMD EPYC 7443P', 'Hector Game Control Panel'],
+      message: 'All hypervisors, Game Control Panel, Pterodactyl daemon wings, and DDoS mitigation tunnels on 103.118.182.98 are operating at peak efficiency.',
+      createdAt: 'Today'
+    }
+  ],
   privacy: `
 # Privacy Policy
 

@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Save, Layout, Shield, LogOut, ChevronRight, Check, UserPlus, Fingerprint, Globe, Cpu,
   FileText, ShieldAlert, RotateCcw, Megaphone, AlertTriangle, Mail, QrCode, PhoneCall, Chrome, Lock, Plus,
-  Layers, Trash2, Edit2, Server, MapPin, Coins, Database, Terminal, Clock, Trash
+  Layers, Trash2, Edit2, Server, MapPin, Coins, Database, Terminal, Clock, Trash, Radio, Activity,
+  CheckCircle2, Wifi, Sparkles, AlertOctagon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AppData, Plan } from '../types';
+import { AppData, Plan, SystemNode, Incident } from '../types';
 import { DEFAULT_DATA } from '../constants';
 import { dataService } from '../services/dataService';
 import { authService } from '../services/authService';
@@ -23,6 +24,7 @@ interface AdminPanelProps {
 
 type Tab = 
   | 'dashboard' 
+  | 'status'
   | 'plans'
   | 'tos' 
   | 'privacy' 
@@ -61,6 +63,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
     return unsubscribe;
   }, []);
 
+  // Status & Node Management States
+  const [editingNode, setEditingNode] = useState<SystemNode | null>(null);
+  const [isNodeModalOpen, setIsNodeModalOpen] = useState(false);
+  const [nodeForm, setNodeForm] = useState<Omit<SystemNode, 'id'>>({
+    name: '',
+    ip: '',
+    role: '',
+    status: 'operational',
+    cpu: '',
+    ram: '',
+    storage: '',
+    location: 'Mumbai, India (Tier 4 DC)',
+    uptime: '99.99%',
+    hasPanel: false,
+    load: 20,
+    latencyMs: 12
+  });
+
+  // Incident & Maintenance Announcement State
+  const [incidentForm, setIncidentForm] = useState<{
+    title: string;
+    type: 'scheduled_maintenance' | 'incident' | 'maintenance' | 'notice';
+    severity: 'info' | 'warning' | 'critical' | 'resolved';
+    status: 'scheduled' | 'in_progress' | 'completed' | 'investigating' | 'identified' | 'monitoring' | 'resolved';
+    affectedNodes: string[];
+    message: string;
+    scheduledFor: string;
+  }>({
+    title: '',
+    type: 'scheduled_maintenance',
+    severity: 'warning',
+    status: 'scheduled',
+    affectedNodes: ['RYZEN 9 9950X', 'Hector Game Panel'],
+    message: '',
+    scheduledFor: ''
+  });
+  const [isPostingIncident, setIsPostingIncident] = useState(false);
+
   // Plans & Taxonomy States
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
@@ -87,9 +127,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
       plans: data.plans || [],
       categories: data.categories || [],
       locations: data.locations || [],
-      nodes: data.nodes || []
+      nodes: data.nodes || [],
+      systemNodes: data.systemNodes && data.systemNodes.length > 0 ? data.systemNodes : prev.systemNodes || DEFAULT_DATA.systemNodes,
+      incidents: data.incidents && data.incidents.length > 0 ? data.incidents : prev.incidents || DEFAULT_DATA.incidents
     }));
-  }, [data.plans, data.categories, data.locations, data.nodes]);
+  }, [data.plans, data.categories, data.locations, data.nodes, data.systemNodes, data.incidents]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -118,8 +160,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
         about: localData.about,
         categories: localData.categories,
         locations: localData.locations,
-        nodes: localData.nodes
+        nodes: localData.nodes,
+        systemNodes: localData.systemNodes,
+        incidents: localData.incidents
       });
+
+      if (localData.systemNodes && localData.systemNodes.length > 0) {
+        await dataService.saveAllNodes(localData.systemNodes);
+      }
+      if (localData.incidents) {
+        await dataService.saveAllIncidents(localData.incidents);
+      }
 
       setData({
         ...data,
@@ -132,7 +183,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
         about: localData.about,
         categories: localData.categories,
         locations: localData.locations,
-        nodes: localData.nodes
+        nodes: localData.nodes,
+        systemNodes: localData.systemNodes,
+        incidents: localData.incidents
       });
       
       logService.addLog('success', 'Global configuration successfully synchronized with Firestore.');
@@ -144,6 +197,201 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
       alert(`Global Save Failed: ${e.message || "Unknown error"}`);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // --- SYSTEM NODE STATUS MANAGEMENT ---
+  const updateNodeStatus = async (nodeId: string, status: 'operational' | 'maintenance' | 'degraded' | 'outage') => {
+    logService.addLog('info', `Updating node ${nodeId} status to ${status}...`);
+    const currentNodes = localData.systemNodes || DEFAULT_DATA.systemNodes || [];
+    const updated = currentNodes.map(n => n.id === nodeId ? { ...n, status } : n);
+    setLocalData(prev => ({ ...prev, systemNodes: updated }));
+    setData({ ...data, systemNodes: updated });
+
+    try {
+      await dataService.updateNode(nodeId, { status });
+      await dataService.updateSettings({ systemNodes: updated });
+      logService.addLog('success', `Node ${nodeId} status changed to ${status}`);
+    } catch (err: any) {
+      logService.addLog('error', `Failed to update node status: ${err.message}`);
+      alert(`Failed to update node status: ${err.message}`);
+    }
+  };
+
+  const openAddNode = () => {
+    setEditingNode(null);
+    setNodeForm({
+      name: '',
+      ip: '',
+      role: 'Game Server & Virtualization Node',
+      status: 'operational',
+      cpu: 'AMD Ryzen 9 9950X (16C/32T)',
+      ram: '128 GB DDR5 5600MHz ECC',
+      storage: '2x 2TB Gen4 Enterprise NVMe',
+      location: 'Mumbai, India (Tier 4 DC)',
+      uptime: '99.99%',
+      hasPanel: false,
+      load: 20,
+      latencyMs: 12
+    });
+    setIsNodeModalOpen(true);
+  };
+
+  const openEditNode = (node: SystemNode) => {
+    setEditingNode(node);
+    setNodeForm({
+      name: node.name,
+      ip: node.ip || '',
+      role: node.role,
+      status: node.status,
+      cpu: node.cpu,
+      ram: node.ram,
+      storage: node.storage,
+      location: node.location,
+      uptime: node.uptime,
+      hasPanel: node.hasPanel || false,
+      load: node.load ?? 20,
+      latencyMs: node.latencyMs ?? 12
+    });
+    setIsNodeModalOpen(true);
+  };
+
+  const saveNodeModal = async () => {
+    if (!nodeForm.name.trim()) {
+      alert("Please enter a node name.");
+      return;
+    }
+
+    const currentNodes = localData.systemNodes || DEFAULT_DATA.systemNodes || [];
+    setIsSaving(true);
+    try {
+      if (editingNode) {
+        const updated = currentNodes.map(n => 
+          n.id === editingNode.id ? { ...editingNode, ...nodeForm } : n
+        );
+        setLocalData(prev => ({ ...prev, systemNodes: updated }));
+        setData({ ...data, systemNodes: updated });
+        await dataService.updateNode(editingNode.id, nodeForm);
+        await dataService.updateSettings({ systemNodes: updated });
+        logService.addLog('success', `Node ${editingNode.name} updated successfully.`);
+      } else {
+        const newId = `node-${Date.now()}`;
+        const newNode: SystemNode = {
+          id: newId,
+          ...nodeForm,
+          order: currentNodes.length + 1
+        };
+        const updated = [...currentNodes, newNode];
+        setLocalData(prev => ({ ...prev, systemNodes: updated }));
+        setData({ ...data, systemNodes: updated });
+        await dataService.updateNode(newId, newNode);
+        await dataService.updateSettings({ systemNodes: updated });
+        logService.addLog('success', `New Node ${newNode.name} added to cluster.`);
+      }
+      setIsNodeModalOpen(false);
+      setEditingNode(null);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to save node: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deleteSystemNode = async (nodeId: string) => {
+    if (!window.confirm("Are you sure you want to remove this hardware node from public status monitoring?")) return;
+    const currentNodes = localData.systemNodes || DEFAULT_DATA.systemNodes || [];
+    const updated = currentNodes.filter(n => n.id !== nodeId);
+    setLocalData(prev => ({ ...prev, systemNodes: updated }));
+    setData({ ...data, systemNodes: updated });
+
+    try {
+      await dataService.deleteNode(nodeId);
+      await dataService.updateSettings({ systemNodes: updated });
+      logService.addLog('success', `Node ${nodeId} removed.`);
+    } catch (err: any) {
+      alert(`Failed to delete node: ${err.message}`);
+    }
+  };
+
+  // --- MAINTENANCE & INCIDENT MANAGEMENT HELPERS ---
+  const postIncidentNotice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!incidentForm.title.trim() || !incidentForm.message.trim()) {
+      alert("Please provide both a title and message for the maintenance announcement.");
+      return;
+    }
+
+    setIsPostingIncident(true);
+    const newIncident: Incident = {
+      id: `inc-${Date.now()}`,
+      title: incidentForm.title.trim(),
+      type: incidentForm.type,
+      severity: incidentForm.severity,
+      status: incidentForm.status,
+      affectedNodes: incidentForm.affectedNodes,
+      message: incidentForm.message.trim(),
+      createdAt: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      scheduledFor: incidentForm.scheduledFor || undefined
+    };
+
+    const currentIncidents = localData.incidents || DEFAULT_DATA.incidents || [];
+    const updated = [newIncident, ...currentIncidents];
+    setLocalData(prev => ({ ...prev, incidents: updated }));
+    setData({ ...data, incidents: updated });
+
+    try {
+      await dataService.addIncident(newIncident);
+      await dataService.updateSettings({ incidents: updated });
+      logService.addLog('success', `Maintenance notice "${newIncident.title}" published to live status page.`);
+      setIncidentForm({
+        title: '',
+        type: 'scheduled_maintenance',
+        severity: 'warning',
+        status: 'scheduled',
+        affectedNodes: ['RYZEN 9 9950X', 'Hector Game Panel'],
+        message: '',
+        scheduledFor: ''
+      });
+      alert("Maintenance announcement successfully published to the live status page!");
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to publish incident: ${err.message}`);
+    } finally {
+      setIsPostingIncident(false);
+    }
+  };
+
+  const updateIncidentStatus = async (id: string, newStatus: Incident['status']) => {
+    const currentIncidents = localData.incidents || DEFAULT_DATA.incidents || [];
+    const updated = currentIncidents.map(inc => 
+      inc.id === id ? { ...inc, status: newStatus, resolvedAt: newStatus === 'resolved' || newStatus === 'completed' ? 'Resolved' : undefined } : inc
+    );
+    setLocalData(prev => ({ ...prev, incidents: updated }));
+    setData({ ...data, incidents: updated });
+
+    try {
+      await dataService.updateIncident(id, { status: newStatus });
+      await dataService.updateSettings({ incidents: updated });
+      logService.addLog('success', `Incident ${id} marked as ${newStatus}`);
+    } catch (err: any) {
+      alert(`Failed to update incident: ${err.message}`);
+    }
+  };
+
+  const deleteIncidentNotice = async (id: string) => {
+    if (!window.confirm("Delete this maintenance announcement from the log?")) return;
+    const currentIncidents = localData.incidents || DEFAULT_DATA.incidents || [];
+    const updated = currentIncidents.filter(inc => inc.id !== id);
+    setLocalData(prev => ({ ...prev, incidents: updated }));
+    setData({ ...data, incidents: updated });
+
+    try {
+      await dataService.deleteIncident(id);
+      await dataService.updateSettings({ incidents: updated });
+      logService.addLog('success', `Incident announcement deleted.`);
+    } catch (err: any) {
+      alert(`Failed to delete incident: ${err.message}`);
     }
   };
 
@@ -549,6 +797,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
       title: 'General Settings',
       items: [
         { id: 'dashboard', label: 'Overview & Config', icon: Layout },
+        { id: 'status', label: 'Node Status & Maintenance', icon: Radio },
       ]
     },
     {
@@ -922,6 +1171,359 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
                       {isSeeding ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Shield size={16} />}
                       {isSeeding ? 'RESTORING TEMPLATES...' : 'RESTORE PAGE TEMPLATES'}
                    </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* --- TAB: NODE INFRASTRUCTURE & MAINTENANCE MANAGEMENT --- */}
+            {activeTab === 'status' && (
+              <motion.div
+                key="status"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-8 max-w-5xl"
+              >
+                {/* Station Top Alert & Public Status Link */}
+                <div className="p-6 bg-gradient-to-r from-[#120c24] to-[#0c0818] border border-purple-900/40 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none" />
+                  <div className="flex items-center gap-4 relative z-10">
+                    <div className="w-12 h-12 bg-purple-500/20 border border-purple-400/30 rounded-2xl flex items-center justify-center text-purple-400">
+                      <Radio size={24} className="animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-white uppercase tracking-tight flex items-center gap-2">
+                        VPS & Node Status Center
+                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-mono rounded">
+                          Live Sync
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Manage hardware hypervisors (Ryzen 9 9950X, AMD EPYC 7443P), game control panel state, and broadcast maintenance notices.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 relative z-10 shrink-0">
+                    <a 
+                      href="/status" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-4 py-2.5 bg-purple-950/60 hover:bg-purple-900/60 border border-purple-800/40 text-purple-200 font-bold rounded-xl text-xs flex items-center gap-2 transition-all"
+                    >
+                      <Globe size={14} />
+                      View Public Status Page
+                    </a>
+                  </div>
+                </div>
+
+                {/* 1. Global Emergency Maintenance Switch & Broadcast Banner */}
+                <div className="bg-[#0e0a1a] border border-purple-900/40 p-6 rounded-2xl space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-300 uppercase tracking-widest flex items-center gap-2">
+                        <AlertTriangle size={16} className="text-amber-400" /> Emergency System Maintenance Broadcast
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5 font-light">
+                        Activating this immediately displays an emergency maintenance banner across the entire public website and status portal.
+                      </p>
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer self-start sm:self-auto bg-[#140e25] px-4 py-2 rounded-xl border border-purple-900/40">
+                      <span className="text-xs text-white font-bold">Maintenance Mode:</span>
+                      <input 
+                        type="checkbox" 
+                        checked={localData.settings.maintenance_mode || false}
+                        onChange={(e) => updateSettings('maintenance_mode', e.target.checked)}
+                        className="w-4 h-4 rounded border-purple-900 bg-[#140e25] text-amber-500 focus:ring-amber-400"
+                      />
+                      <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded ${
+                        localData.settings.maintenance_mode ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-400'
+                      }`}>
+                        {localData.settings.maintenance_mode ? 'ACTIVE' : 'DISABLED'}
+                      </span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-2 block">
+                      Global Maintenance Alert Message
+                    </label>
+                    <input 
+                      type="text" 
+                      value={localData.settings.maintenance_message || ''}
+                      onChange={(e) => updateSettings('maintenance_message', e.target.value)}
+                      placeholder="e.g. Scheduled core maintenance in progress. Game instances remain online."
+                      className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-amber-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Physical & Virtual Node Cluster Monitoring */}
+                <div className="bg-[#0e0a1a] border border-purple-900/40 p-6 rounded-2xl space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h4 className="text-xs font-bold text-purple-300 uppercase tracking-widest flex items-center gap-2">
+                        <Server size={16} className="text-purple-400" /> Hardware Nodes & Game Panel Daemons
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5 font-light">
+                        Configure status, specs, IP routing, and panel bindings for each node in your infrastructure.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={openAddNode}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 self-start sm:self-auto shadow-lg shadow-purple-600/30 transition-all"
+                    >
+                      <Plus size={15} /> Add Custom Node
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {(localData.systemNodes && localData.systemNodes.length > 0 ? localData.systemNodes : DEFAULT_DATA.systemNodes || []).map((node) => {
+                      return (
+                        <div 
+                          key={node.id} 
+                          className="p-5 bg-[#140e25] border border-purple-900/40 hover:border-purple-700/50 rounded-2xl space-y-4 transition-all"
+                        >
+                          {/* Node Header Row */}
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="text-base font-black text-white font-mono">{node.name}</span>
+                                {node.hasPanel && (
+                                  <span className="px-2 py-0.5 bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[9px] font-mono font-bold uppercase rounded">
+                                    Control Panel Node
+                                  </span>
+                                )}
+                                {node.ip && (
+                                  <span className="text-xs font-mono text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-900/40">
+                                    IP: {node.ip}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-400 mt-0.5 font-light">{node.role}</p>
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Quick 1-Click Status Selector Pills */}
+                              {(['operational', 'maintenance', 'degraded', 'outage'] as const).map((st) => (
+                                <button
+                                  key={st}
+                                  onClick={() => updateNodeStatus(node.id, st)}
+                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all ${
+                                    node.status === st
+                                      ? st === 'operational'
+                                        ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30 font-bold'
+                                        : st === 'maintenance'
+                                          ? 'bg-amber-500 text-black shadow-md shadow-amber-500/30 font-bold'
+                                          : st === 'degraded'
+                                            ? 'bg-yellow-500 text-black font-bold'
+                                            : 'bg-red-600 text-white shadow-md shadow-red-600/30 font-bold'
+                                      : 'bg-purple-950/40 text-slate-400 hover:text-white border border-purple-900/30'
+                                  }`}
+                                >
+                                  {st}
+                                </button>
+                              ))}
+
+                              <button 
+                                onClick={() => openEditNode(node)}
+                                className="p-2 hover:bg-purple-800/40 text-slate-300 hover:text-white rounded-lg transition-colors ml-2"
+                                title="Edit Node Specifications"
+                              >
+                                <Edit2 size={15} />
+                              </button>
+
+                              <button 
+                                onClick={() => deleteSystemNode(node.id)}
+                                className="p-2 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                                title="Delete Node"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Node Specs Info line */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-purple-900/30 text-[11px] font-mono text-slate-300">
+                            <div><span className="text-slate-500">CPU:</span> {node.cpu}</div>
+                            <div><span className="text-slate-500">RAM:</span> {node.ram}</div>
+                            <div><span className="text-slate-500">Storage:</span> {node.storage}</div>
+                            <div><span className="text-slate-500">Uptime:</span> {node.uptime}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Post Maintenance Announcement or Incident Notice */}
+                <div className="bg-[#0e0a1a] border border-purple-900/40 p-6 rounded-2xl space-y-6">
+                  <h4 className="text-xs font-bold text-purple-300 uppercase tracking-widest flex items-center gap-2">
+                    <Megaphone size={16} className="text-yellow-400" /> Broadcast Maintenance Notice or Incident
+                  </h4>
+                  <p className="text-[11px] text-slate-400 font-light leading-relaxed">
+                    Post a scheduled maintenance notice or incident report. It will be published instantly to the public Status Page.
+                  </p>
+
+                  <form onSubmit={postIncidentNotice} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                          Notice / Incident Title
+                        </label>
+                        <input 
+                          type="text" 
+                          required
+                          value={incidentForm.title}
+                          onChange={(e) => setIncidentForm(prev => ({ ...prev, title: e.target.value }))}
+                          placeholder="e.g. Scheduled Kernel Upgrade on Ryzen 9 9950X"
+                          className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                          Category & Status
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            value={incidentForm.type}
+                            onChange={(e) => setIncidentForm(prev => ({ ...prev, type: e.target.value as any }))}
+                            className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none font-mono"
+                          >
+                            <option value="scheduled_maintenance">Scheduled Maintenance</option>
+                            <option value="incident">Service Incident</option>
+                            <option value="maintenance">Maintenance</option>
+                            <option value="notice">General Notice</option>
+                          </select>
+
+                          <select
+                            value={incidentForm.status}
+                            onChange={(e) => setIncidentForm(prev => ({ ...prev, status: e.target.value as any }))}
+                            className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none font-mono"
+                          >
+                            <option value="scheduled">Scheduled</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="investigating">Investigating</option>
+                            <option value="identified">Identified</option>
+                            <option value="monitoring">Monitoring</option>
+                            <option value="resolved">Resolved / Complete</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                          Affected Targets (Comma Separated)
+                        </label>
+                        <input 
+                          type="text" 
+                          value={incidentForm.affectedNodes.join(', ')}
+                          onChange={(e) => setIncidentForm(prev => ({ ...prev, affectedNodes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                          placeholder="e.g. RYZEN 9 9950X, Hector Game Panel, 103.118.182.98"
+                          className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                          Schedule Window (Optional)
+                        </label>
+                        <input 
+                          type="text" 
+                          value={incidentForm.scheduledFor}
+                          onChange={(e) => setIncidentForm(prev => ({ ...prev, scheduledFor: e.target.value }))}
+                          placeholder="e.g. Sunday at 02:00 UTC (15 mins window)"
+                          className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                          Announcement Message Details
+                        </label>
+                        <textarea 
+                          required
+                          rows={3}
+                          value={incidentForm.message}
+                          onChange={(e) => setIncidentForm(prev => ({ ...prev, message: e.target.value }))}
+                          placeholder="Provide details about the maintenance or incident..."
+                          className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none leading-relaxed font-light"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="submit"
+                        disabled={isPostingIncident}
+                        className="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 transition-all shadow-lg shadow-purple-600/30 disabled:opacity-50"
+                      >
+                        {isPostingIncident ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Megaphone size={15} />
+                        )}
+                        <span>{isPostingIncident ? 'Publishing...' : 'Broadcast Maintenance Bulletin'}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* 4. Active Announcements & Incident History Log */}
+                <div className="bg-[#0e0a1a] border border-purple-900/40 p-6 rounded-2xl space-y-6">
+                  <h4 className="text-xs font-bold text-purple-300 uppercase tracking-widest flex items-center gap-2">
+                    <Clock size={16} className="text-purple-400" /> Maintenance & Incident Log Archives
+                  </h4>
+
+                  <div className="space-y-3">
+                    {(localData.incidents && localData.incidents.length > 0 ? localData.incidents : DEFAULT_DATA.incidents || []).map((inc) => (
+                      <div 
+                        key={inc.id}
+                        className="p-4 bg-[#140e25] border border-purple-900/40 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="text-sm font-bold text-white">{inc.title}</span>
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
+                              inc.status === 'resolved' || inc.status === 'completed'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : inc.status === 'scheduled'
+                                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            }`}>
+                              {inc.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 line-clamp-1">{inc.message}</p>
+                          <span className="text-[10px] font-mono text-purple-400 block">{inc.createdAt}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <select
+                            value={inc.status}
+                            onChange={(e) => updateIncidentStatus(inc.id, e.target.value as any)}
+                            className="bg-[#0e0a1a] border border-purple-900/60 rounded-lg px-2.5 py-1.5 text-xs text-purple-300 font-mono"
+                          >
+                            <option value="scheduled">Scheduled</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="investigating">Investigating</option>
+                            <option value="monitoring">Monitoring</option>
+                            <option value="resolved">Resolved</option>
+                          </select>
+
+                          <button 
+                            onClick={() => deleteIncidentNotice(inc.id)}
+                            className="p-2 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                            title="Delete Notice"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -1725,6 +2327,193 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
                   className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-600/30 transition-all"
                 >
                   Confirm Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- HARDWARE NODE CONFIG MODAL --- */}
+      <AnimatePresence>
+        {isNodeModalOpen && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 backdrop-blur-md bg-black/60">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="max-w-2xl w-full bg-[#0f0b1a] border border-purple-500/30 rounded-3xl p-8 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto custom-scrollbar"
+            >
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-purple-900/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-600/20 border border-purple-500/30 rounded-xl flex items-center justify-center text-purple-400">
+                    <Server size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white uppercase tracking-tight">
+                      {editingNode ? `Edit Hardware Node: ${editingNode.name}` : 'Provision Custom Cluster Node'}
+                    </h3>
+                    <p className="text-xs text-slate-400">Configure status telemetry, IP address, and hardware specifications.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsNodeModalOpen(false)}
+                  className="p-2 text-slate-500 hover:text-white rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                    Node Cluster Identifier *
+                  </label>
+                  <input 
+                    type="text" 
+                    value={nodeForm.name}
+                    onChange={e => setNodeForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g. RYZEN 9 9950X or AMD EPYC 7443P"
+                    className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                    Node IP Address (Public)
+                  </label>
+                  <input 
+                    type="text" 
+                    value={nodeForm.ip}
+                    onChange={e => setNodeForm(prev => ({ ...prev, ip: e.target.value }))}
+                    placeholder="e.g. 103.118.182.98"
+                    className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none font-mono"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                    Operational Role & Workload
+                  </label>
+                  <input 
+                    type="text" 
+                    value={nodeForm.role}
+                    onChange={e => setNodeForm(prev => ({ ...prev, role: e.target.value }))}
+                    placeholder="e.g. Primary Game Virtualization & Wings Daemon Hypervisor"
+                    className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                    Node Status
+                  </label>
+                  <select
+                    value={nodeForm.status}
+                    onChange={e => setNodeForm(prev => ({ ...prev, status: e.target.value as any }))}
+                    className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none font-mono"
+                  >
+                    <option value="operational">Operational (Online)</option>
+                    <option value="maintenance">Maintenance (Scheduled)</option>
+                    <option value="degraded">Degraded Performance</option>
+                    <option value="outage">Major Outage</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                    Datacenter Facility
+                  </label>
+                  <input 
+                    type="text" 
+                    value={nodeForm.location}
+                    onChange={e => setNodeForm(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="e.g. Mumbai, India (Tier 4 DC)"
+                    className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                    CPU Specifications
+                  </label>
+                  <input 
+                    type="text" 
+                    value={nodeForm.cpu}
+                    onChange={e => setNodeForm(prev => ({ ...prev, cpu: e.target.value }))}
+                    placeholder="e.g. AMD Ryzen 9 9950X (16C/32T 5.7GHz)"
+                    className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                    RAM Memory
+                  </label>
+                  <input 
+                    type="text" 
+                    value={nodeForm.ram}
+                    onChange={e => setNodeForm(prev => ({ ...prev, ram: e.target.value }))}
+                    placeholder="e.g. 128 GB DDR5 ECC"
+                    className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                    NVMe Storage
+                  </label>
+                  <input 
+                    type="text" 
+                    value={nodeForm.storage}
+                    onChange={e => setNodeForm(prev => ({ ...prev, storage: e.target.value }))}
+                    placeholder="e.g. 2x 2TB Gen4 Enterprise NVMe"
+                    className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1.5 block">
+                    Uptime SLA Percentage
+                  </label>
+                  <input 
+                    type="text" 
+                    value={nodeForm.uptime}
+                    onChange={e => setNodeForm(prev => ({ ...prev, uptime: e.target.value }))}
+                    placeholder="e.g. 99.99%"
+                    className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none font-mono"
+                  />
+                </div>
+
+                <div className="md:col-span-2 pt-2">
+                  <label className="flex items-center gap-3 p-3 bg-[#140e25] border border-purple-900/40 rounded-xl cursor-pointer">
+                    <input 
+                      type="checkbox"
+                      checked={nodeForm.hasPanel}
+                      onChange={e => setNodeForm(prev => ({ ...prev, hasPanel: e.target.checked }))}
+                      className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-[#0e0a1a] border-purple-900"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-white block">Hosts Hector Game Control Panel</span>
+                      <span className="text-[10px] text-slate-400">Mark this node as the primary host for the web management panel.</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setIsNodeModalOpen(false)}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all text-xs"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={saveNodeModal}
+                  className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl shadow-lg shadow-purple-600/30 transition-all text-xs flex items-center justify-center gap-2"
+                >
+                  <Save size={15} />
+                  <span>Save Node Settings</span>
                 </button>
               </div>
             </motion.div>

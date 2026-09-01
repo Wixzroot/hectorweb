@@ -97,6 +97,45 @@
         "whmcs_identifier": { "type": "string" },
         "whmcs_secret": { "type": "string" }
       }
+    },
+    "SystemNode": {
+      "title": "System Node",
+      "description": "Hardware and VPS node status configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ip": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string", "enum": ["operational", "maintenance", "degraded", "outage"] },
+        "cpu": { "type": "string" },
+        "ram": { "type": "string" },
+        "storage": { "type": "string" },
+        "location": { "type": "string" },
+        "uptime": { "type": "string" },
+        "hasPanel": { "type": "boolean" },
+        "load": { "type": "number" },
+        "latencyMs": { "type": "number" }
+      },
+      "required": ["name", "status"]
+    },
+    "Incident": {
+      "title": "Maintenance Incident",
+      "description": "Maintenance notices and incident alerts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["scheduled_maintenance", "incident", "maintenance", "notice"] },
+        "severity": { "type": "string", "enum": ["info", "warning", "critical", "resolved"] },
+        "status": { "type": "string", "enum": ["scheduled", "in_progress", "completed", "investigating", "identified", "monitoring", "resolved"] },
+        "affectedNodes": { "type": "array", "items": { "type": "string" } },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "scheduledFor": { "type": "string" },
+        "resolvedAt": { "type": "string" }
+      },
+      "required": ["title", "message", "status"]
     }
   },
   "firestore": {
@@ -115,6 +154,14 @@
     "feedbacks": {
       "schema": "Feedback",
       "description": "Collection of user-submitted feedbacks"
+    },
+    "nodes": {
+      "schema": "SystemNode",
+      "description": "Collection of infrastructure node statuses"
+    },
+    "incidents": {
+      "schema": "Incident",
+      "description": "Collection of maintenance announcements and incident logs"
     },
     "whmcs_logs": {
       "schema": "WHMCSLog",

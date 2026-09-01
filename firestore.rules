@@ -80,6 +80,16 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    match /nodes/{nodeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /incidents/{incidentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
     match /admins/{userId} {
       allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
       // Only an existing admin can create another admin

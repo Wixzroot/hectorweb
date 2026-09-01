@@ -68,11 +68,44 @@ export interface Settings {
   nav_links: NavLink[];
 }
 
+export interface SystemNode {
+  id: string;
+  name: string;
+  ip?: string;
+  role: string;
+  status: 'operational' | 'maintenance' | 'degraded' | 'outage';
+  cpu: string;
+  ram: string;
+  storage: string;
+  location: string;
+  uptime: string;
+  hasPanel?: boolean;
+  load?: number;
+  latencyMs?: number;
+  order?: number;
+}
+
+export interface Incident {
+  id: string;
+  title: string;
+  type: 'scheduled_maintenance' | 'incident' | 'maintenance' | 'notice';
+  severity: 'info' | 'warning' | 'critical' | 'resolved';
+  status: 'scheduled' | 'in_progress' | 'completed' | 'investigating' | 'identified' | 'monitoring' | 'resolved';
+  affectedNodes: string[];
+  message: string;
+  createdAt: string;
+  scheduledFor?: string;
+  resolvedAt?: string;
+  updatedAt?: string;
+}
+
 export interface AppData {
   settings: Settings;
   plans: Plan[];
   testimonials: Testimonial[];
   feedbacks: Feedback[];
+  systemNodes?: SystemNode[];
+  incidents?: Incident[];
   privacy: string;
   refund: string;
   tos: string;
