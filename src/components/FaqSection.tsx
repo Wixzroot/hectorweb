@@ -178,13 +178,8 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
                   { href: discordUrl, label: 'Discord', desc: 'Real-time operations', icon: MessageSquare, isExternal: true },
                   { href: `mailto:${supportEmail}`, label: 'Email', desc: 'Formal tickets', icon: Mail, isExternal: true }
                 ].map((item, i) => {
-                  const Comp = item.to ? Link : 'a';
-                  return (
-                    <Comp
-                      key={i}
-                      {...(item.to ? { to: item.to } : { href: item.href, target: "_blank", rel: "noopener noreferrer" })}
-                      className="flex items-center justify-between p-4 bg-bg border border-border hover:border-accent rounded transition-all group"
-                    >
+                  const cardContent = (
+                    <>
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded bg-bg-alt border border-border flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
                           <item.icon size={18} />
@@ -195,7 +190,19 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
                         </div>
                       </div>
                       <ExternalLink size={14} className="text-foreground-dim group-hover:text-accent transition-colors" />
-                    </Comp>
+                    </>
+                  );
+
+                  const commonClasses = "flex items-center justify-between p-4 bg-bg border border-border hover:border-accent rounded transition-all group";
+
+                  return item.to ? (
+                    <Link key={i} to={item.to} className={commonClasses}>
+                      {cardContent}
+                    </Link>
+                  ) : (
+                    <a key={i} href={item.href} target="_blank" rel="noopener noreferrer" className={commonClasses}>
+                      {cardContent}
+                    </a>
                   );
                 })}
               </div>

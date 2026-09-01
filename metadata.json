@@ -2,5 +2,7 @@
   "name": "HectorHosting - Minecraft & Game Hosting",
   "description": "HectorHosting gives you Minecraft hosting, bot hosting, web hosting, and affordable VPS plans in one place with DDoS protection and instant setup.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
