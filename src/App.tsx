@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { AdminPanel } from './components/AdminPanel';
-import { AppData, Plan, Feedback, Testimonial } from './types';
+import { AppData, Plan, Feedback, Testimonial, SystemNode, Incident } from './types';
 import { DEFAULT_DATA } from './constants';
 import { dataService } from './services/dataService';
 import { authService } from './services/authService';
 import { User as FirebaseUser } from 'firebase/auth';
 import { db } from './services/firebase';
-import { doc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
 
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { ContentPage } from './components/ContentPage';
@@ -88,10 +88,26 @@ export default function App() {
           about: settings.about || prev.about,
           categories: Array.from(new Set(settings.categories || prev.categories)),
           locations: Array.from(new Set(settings.locations || prev.locations)),
-          nodes: Array.from(new Set(settings.nodes || prev.nodes))
+          nodes: Array.from(new Set(settings.nodes || prev.nodes)),
+          systemNodes: settings.systemNodes || prev.systemNodes,
+          incidents: settings.incidents || prev.incidents
         }));
       } else {
         checkAndSeed();
+      }
+    });
+
+    const unsubNodes = onSnapshot(collection(db, 'nodes'), (snap) => {
+      if (!snap.empty) {
+        const nodes = snap.docs.map(d => ({ ...d.data(), id: d.id } as SystemNode));
+        setData(prev => ({ ...prev, systemNodes: nodes }));
+      }
+    });
+
+    const unsubIncidents = onSnapshot(query(collection(db, 'incidents'), orderBy('createdAt', 'desc')), (snap) => {
+      if (!snap.empty) {
+        const incidents = snap.docs.map(d => ({ ...d.data(), id: d.id } as Incident));
+        setData(prev => ({ ...prev, incidents }));
       }
     });
 
@@ -116,6 +132,8 @@ export default function App() {
 
     return () => {
       unsubSettings();
+      unsubNodes();
+      unsubIncidents();
       unsubPlans();
       unsubTestimonials();
       unsubFeedback();
