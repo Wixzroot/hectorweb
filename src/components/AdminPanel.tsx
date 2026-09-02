@@ -74,7 +74,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
     cpu: '',
     ram: '',
     storage: '',
-    location: 'Mumbai, India (Tier 4 DC)',
+    location: 'Mumbai, India',
     uptime: '99.99%',
     hasPanel: false,
     load: 20,
@@ -95,7 +95,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
     type: 'scheduled_maintenance',
     severity: 'warning',
     status: 'scheduled',
-    affectedNodes: ['RYZEN 9 9950X', 'Hector Game Panel'],
+    affectedNodes: ['RYZEN 9 9950X', 'EPYC 7443P', 'Game Control Panel'],
     message: '',
     scheduledFor: ''
   });
@@ -228,7 +228,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
       cpu: 'AMD Ryzen 9 9950X (16C/32T)',
       ram: '128 GB DDR5 5600MHz ECC',
       storage: '2x 2TB Gen4 Enterprise NVMe',
-      location: 'Mumbai, India (Tier 4 DC)',
+      location: 'Mumbai, India',
       uptime: '99.99%',
       hasPanel: false,
       load: 20,
@@ -349,7 +349,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
         type: 'scheduled_maintenance',
         severity: 'warning',
         status: 'scheduled',
-        affectedNodes: ['RYZEN 9 9950X', 'Hector Game Panel'],
+        affectedNodes: ['RYZEN 9 9950X', 'EPYC 7443P', 'Game Control Panel'],
         message: '',
         scheduledFor: ''
       });
@@ -1421,7 +1421,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
                           type="text" 
                           value={incidentForm.affectedNodes.join(', ')}
                           onChange={(e) => setIncidentForm(prev => ({ ...prev, affectedNodes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
-                          placeholder="e.g. RYZEN 9 9950X, Hector Game Panel, 103.118.182.98"
+                          placeholder="e.g. RYZEN 9 9950X, EPYC 7443P, Game Control Panel"
                           className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none"
                         />
                       </div>
@@ -2428,7 +2428,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ data, setData, onClose, 
                     type="text" 
                     value={nodeForm.location}
                     onChange={e => setNodeForm(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="e.g. Mumbai, India (Tier 4 DC)"
+                    placeholder="e.g. Mumbai, India"
                     className="w-full bg-[#140e25] border border-purple-900/40 rounded-xl p-3 text-xs text-white focus:border-purple-500 outline-none"
                   />
                 </div>

@@ -25,6 +25,7 @@ import { ContactPage } from './pages/ContactPage';
 import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { RefundPage } from './pages/RefundPage';
+import { StatusPage } from './pages/StatusPage';
 
 // ScrollToTop component to reset window scroll on page change
 function ScrollToTop() {
@@ -294,6 +295,7 @@ export default function App() {
               />
             } />
             <Route path="/about" element={<AboutPage data={data} />} />
+            <Route path="/status" element={<StatusPage data={data} />} />
             <Route path="/contact" element={<ContactPage data={data} />} />
             <Route path="/infrastructure" element={<ContentPage title="Our Infrastructure" content={data.infrastructure} />} />
             <Route path="/privacy" element={<PrivacyPage data={data} />} />

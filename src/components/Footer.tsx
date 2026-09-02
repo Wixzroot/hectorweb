@@ -98,6 +98,7 @@ export const Footer: React.FC<FooterProps> = ({ data, setIsAdminMode }) => {
               </h4>
               <ul className="space-y-4">
                 <li><Link to="/about" className="text-[13px] text-foreground-muted hover:text-accent transition-colors">About Enterprise</Link></li>
+                <li><Link to="/status" className="text-[13px] text-emerald-400 hover:text-emerald-300 font-medium transition-colors flex items-center gap-1.5">Node Status & SLA</Link></li>
                 <li><Link to="/infrastructure" className="text-[13px] text-foreground-muted hover:text-accent transition-colors">Network Map</Link></li>
                 <li><Link to="/contact" className="text-[13px] text-foreground-muted hover:text-accent transition-colors">Contact Center</Link></li>
               </ul>
@@ -123,10 +124,14 @@ export const Footer: React.FC<FooterProps> = ({ data, setIsAdminMode }) => {
           </div>
 
           <div className="flex items-center gap-8">
-            <div className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              All Systems Operational
-            </div>
+            <Link 
+              to="/status" 
+              className="flex items-center gap-2 text-[10px] font-black text-emerald-500 hover:text-emerald-400 uppercase tracking-widest transition-colors group"
+              title="View Live VPS & Cluster Node Status"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse group-hover:scale-125 transition-transform" />
+              <span>All Systems Operational</span>
+            </Link>
             
             <button 
               onClick={() => setIsAdminMode(true)}

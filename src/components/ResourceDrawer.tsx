@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ChevronRight, Info, Database, FileText, Shield, RefreshCcw, Landmark } from 'lucide-react';
+import { X, ChevronRight, Info, Database, FileText, Shield, RefreshCcw, Landmark, Radio } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface ResourceDrawerProps {
@@ -10,6 +10,7 @@ interface ResourceDrawerProps {
 
 export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({ isOpen, onClose }) => {
   const links = [
+    { label: 'System Status', href: '/status', icon: Radio, desc: 'Real-time node telemetry, uptime, and maintenance' },
     { label: 'About Company', href: '/about', icon: Info, desc: 'Our mission and performance philosophy' },
     { label: 'Infrastructure', href: '/infrastructure', icon: Database, desc: 'Hardware stack and global data centers' },
     { label: 'Terms of Service', href: '/tos', icon: FileText, desc: 'Acceptable use and legal agreements' },

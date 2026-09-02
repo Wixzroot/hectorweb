@@ -197,10 +197,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Controls */}
           <div className="hidden sm:flex items-center gap-6">
-            <div className="text-[10px] font-bold tracking-widest text-foreground-dim uppercase flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Status: Operational
-            </div>
+            <Link 
+              to="/status" 
+              className="text-[10px] font-bold tracking-widest text-foreground-dim hover:text-foreground uppercase flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-bg-alt/80 border border-transparent hover:border-border transition-all group"
+              title="View Live VPS & Cluster Node Status"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse group-hover:scale-125 transition-transform" />
+              <span className="group-hover:text-accent transition-colors">Status: Operational</span>
+            </Link>
 
             <Link 
               to="/vps"
@@ -251,10 +255,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </Link>
 
                 <div className="pt-8 border-t border-border flex flex-col gap-4">
-                  <div className="text-[10px] font-bold tracking-widest text-foreground-dim uppercase flex items-center gap-2">
+                  <Link 
+                    to="/status"
+                    onClick={() => setIsOpen(false)}
+                    className="text-[10px] font-bold tracking-widest text-foreground-dim hover:text-foreground uppercase flex items-center gap-2 p-2 rounded-lg hover:bg-bg-alt transition-colors"
+                  >
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Operational
-                  </div>
+                    <span>Status: All Systems Operational</span>
+                  </Link>
                   <Link 
                     to="/vps"
                     onClick={() => setIsOpen(false)}

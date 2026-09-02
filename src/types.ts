@@ -72,16 +72,25 @@ export interface SystemNode {
   id: string;
   name: string;
   ip?: string;
+  hideIp?: boolean;
   role: string;
+  tags?: string[];
   status: 'operational' | 'maintenance' | 'degraded' | 'outage';
   cpu: string;
-  ram: string;
-  storage: string;
+  ram?: string;
+  storage?: string;
   location: string;
   uptime: string;
   hasPanel?: boolean;
   load?: number;
   latencyMs?: number;
+  downtimeTodayMinutes?: number;
+  downtimeReason?: string;
+  dailyDowntime?: {
+    date: string;
+    downtimeMinutes: number;
+    status: 'operational' | 'maintenance' | 'degraded' | 'outage';
+  }[];
   order?: number;
 }
 
